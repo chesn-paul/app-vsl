@@ -46,31 +46,40 @@ function forceBase(p, programme) {
 
 function calculerCotes(pilots, paris, programme, typePari, categorieId) {
   if (!pilots.length) return {};
+
   const parisRelatifs = paris.filter(p => {
     const progMatch = programme ? p.programme === programme : !p.programme;
     return p.typePari === typePari && progMatch && p.categorieId === categorieId && !p.clos;
   });
   const totalMise = parisRelatifs.reduce((s, p) => s + p.mise, 0) || 1;
-  const plafond = 3;
 
-  const forces = pilots.map(p => {
-    const baseForce = forceBase(p, programme);
-    // bottom3 : inverser la force — le plus faible devient le plus probable
-    const base = typePari === "bottom3"
-      ? Math.pow(1 / Math.max(baseForce, 1) * 10000, 12)
-      : Math.pow(baseForce, 12);
-    const misesPilote = parisRelatifs.filter(x => x.piloteId === p.id).reduce((s, x) => s + x.mise, 0);
-    const facteur = 1 - (misesPilote / totalMise) * 0.4;
-    return { id: p.id, force: base * Math.max(0.15, facteur) };
-  });
+  // Forces brutes
+  const rawForces = pilots.map(p => ({
+    id: p.id,
+    f: forceBase(p, programme)
+  }));
 
-  const total = forces.reduce((s, f) => s + f.force, 0);
+  const minF = Math.min(...rawForces.map(x => x.f));
+  const maxF = Math.max(...rawForces.map(x => x.f));
+
   const result = {};
-  forces.forEach(f => {
-    const prob = total > 0 ? f.force / total : 1 / forces.length;
-    const raw  = (!isNaN(prob) && prob > 0) ? (1 / prob) * 0.45 : 1.5;
-    result[f.id] = Math.min(plafond, Math.max(1.01, Math.round(raw * 100) / 100));
+  rawForces.forEach(x => {
+    // Normalisation 0-1 : Oddon=1, Chesneau=0
+    const norm = maxF > minF ? (x.f - minF) / (maxF - minF) : 0.5;
+
+    // bottom3 : inverser — le plus faible devient le favori
+    const normFinal = typePari === "bottom3" ? 1 - norm : norm;
+
+    // Influence des paris sur la cote
+    const misesPilote = parisRelatifs.filter(pr => pr.piloteId === x.id).reduce((s, pr) => s + pr.mise, 0);
+    const facteur = 1 - (misesPilote / totalMise) * 0.4;
+    const normAjuste = Math.max(0.01, Math.min(1, normFinal * Math.max(0.15, facteur)));
+
+    // Mapping direct sur 1x-3x
+    const cote = 3 - normAjuste * 2;
+    result[x.id] = Math.round(Math.min(3, Math.max(1.01, cote)) * 100) / 100;
   });
+
   return result;
 }
 
