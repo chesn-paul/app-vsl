@@ -8,8 +8,9 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "server": "node server.js",
+    "start": "node server.js",
     "dev:full": "concurrently \"npm run dev\" \"npm run server\""
+    
   },
   "dependencies": {
     "better-sqlite3": "^12.10.0",

@@ -7,19 +7,13 @@ import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const app    = express();
-const resend = new Resend("re_VOTRE_CLE_RESEND");
-const FROM_EMAIL = "Voltige Paris <paris@votredomaine.com>";
+const app      = express();
+const resend   = new Resend(process.env.RESEND_API_KEY);
+const FROM_EMAIL = "Aerofestival 2026 Paris <arbitre@pari-aerofestival.com>";
 
-// ─── BASE DE DONNÉES SQLite ───────────────────────────────────────────────────
+// ─── BASE DE DONNÉES ──────────────────────────────────────────────────────────
 const db = new Database("voltige.db");
-
-db.exec(`
-  CREATE TABLE IF NOT EXISTS store (
-    key   TEXT PRIMARY KEY,
-    value TEXT NOT NULL
-  );
-`);
+db.exec(`CREATE TABLE IF NOT EXISTS store (key TEXT PRIMARY KEY, value TEXT NOT NULL);`);
 
 const dbGet = (key, fallback) => {
   const row = db.prepare("SELECT value FROM store WHERE key = ?").get(key);
@@ -29,81 +23,69 @@ const dbSet = (key, value) => {
   db.prepare("INSERT OR REPLACE INTO store (key, value) VALUES (?, ?)").run(key, JSON.stringify(value));
 };
 
-// ─── IMPORT PILOTES AU PREMIER DÉMARRAGE ─────────────────────────────────────
-// Si la clé "pilots" n'existe pas encore dans la BDD, on importe bdd_pilote.json
+// ─── IMPORT PILOTES ───────────────────────────────────────────────────────────
 const CAT_MAP = {
-  elite: "unlimited", excellence: "advanced",
-  national1: "intermediate", national2: "primary",
-  promotion: "junior", espoir: "feminine",
+  elite:"unlimited", excellence:"advanced",
+  national1:"intermediate", national2:"primary",
+  promotion:"junior", espoir:"feminine",
 };
-
-function initials(prenom, nom) {
-  const p = (prenom || "X")[0].toUpperCase();
-  const n = (nom    || "X")[0].toUpperCase();
-  return p + n;
-}
 
 function importPilots() {
   const jsonPath = join(__dirname, "bdd_pilote.json");
-  if (!existsSync(jsonPath)) {
-    console.log("  ⚠️  bdd_pilote.json introuvable — import ignoré");
-    return;
-  }
+  if (!existsSync(jsonPath)) { console.log("  ⚠️  bdd_pilote.json introuvable"); return; }
   let raw = readFileSync(jsonPath, "utf8");
-  // Le fichier utilise "" comme délimiteur de chaîne → on normalise
   raw = raw.replace(/""/g, '"').replace(/"\s*\n\s*"/g, "");
-  const data = JSON.parse(raw);
+  const data   = JSON.parse(raw);
   const pilots = data.map(p => ({
-    id:             p.id,
-    nom:            p.nom            ?? "",
-    prenom:         p.prenom         ?? "",
-    civilite:       p.civilite === "Mme" ? "Mme" : "M.",
-    nationalite:    p.nationalite    ?? "France",
-    participations: p.experience     ?? 1,
-    victoires:      0,
-    podiums:        p.podiums        ?? 0,
-    avion:          p.avion          ?? "",
-    club:           p.club           ?? "",
-    score_moyen:    p.score_moyen    ?? 70,
-    regularite:     p.regularite     ?? 75,
-    photo:          initials(p.prenom, p.nom),
-    categorieId:    CAT_MAP[p.categorieId] ?? "junior",
-    palmares:       p.palmares       ?? [],
-    bio:            p.bio            ?? "",
-    scores:         {},
-    historique:     [],
+    id: p.id, nom: p.nom ?? "", prenom: p.prenom ?? "",
+    civilite: p.civilite === "Mme" ? "Mme" : "M.",
+    nationalite: p.nationalite ?? "France",
+    participations: p.experience ?? 1, victoires: 0, podiums: p.podiums ?? 0,
+    avion: p.avion ?? "", club: p.club ?? "",
+    score_moyen: p.score_moyen ?? 70, regularite: p.regularite ?? 75,
+    photo: ((p.prenom||"X")[0]+(p.nom||"X")[0]).toUpperCase(),
+    categorieId: CAT_MAP[p.categorieId] ?? "junior",
+    palmares: p.palmares ?? [], bio: p.bio ?? "",
+    scores: {}, historique: [],
   }));
   dbSet("pilots", pilots);
-  console.log(`  ✅ ${pilots.length} pilotes importés depuis bdd_pilote.json`);
+  console.log(`  ✅ ${pilots.length} pilotes importés`);
 }
 
-if (!dbGet("pilots", null)) {
-  console.log("\n📥 Première initialisation — import des pilotes...");
+const dbPilots = dbGet("pilots", []);
+const jsonPath = join(__dirname, "bdd_pilote.json");
+if (existsSync(jsonPath)) {
+  let raw = readFileSync(jsonPath, "utf8");
+  raw = raw.replace(/""/g, '"').replace(/"\s*\n\s*"/g, "");
+  const jsonPilots = JSON.parse(raw);
+  if (dbPilots.length !== jsonPilots.length) {
+    console.log(`\n📥 Mise à jour pilotes (${dbPilots.length} → ${jsonPilots.length})...`);
+    importPilots();
+  } else {
+    console.log(`\n✅ ${dbPilots.length} pilotes en base`);
+  }
+} else if (!dbPilots.length) {
   importPilots();
 }
 
 // ─── MIDDLEWARE ───────────────────────────────────────────────────────────────
-app.use(cors()); // accepte tous les domaines — restreignez si besoin
+app.use(cors());
 app.use(express.json({ limit: "5mb" }));
-
 app.use((req, _res, next) => {
   console.log(`${new Date().toLocaleTimeString()} — ${req.method} ${req.path}`);
   next();
 });
 
-// ─── ROUTES DONNÉES ───────────────────────────────────────────────────────────
-
-// Charger toutes les données (appelé au démarrage de l'app)
+// ─── ROUTES API ───────────────────────────────────────────────────────────────
 app.get("/api/data", (req, res) => {
   res.json({
-    pilots:       dbGet("pilots",       null),   // null = utiliser INITIAL_PILOTS côté front
+    pilots:       dbGet("pilots",       null),
     paris:        dbGet("paris",        []),
     parisOuverts: dbGet("parisOuverts", true),
     resultats:    dbGet("resultats",    {}),
   });
 });
 
-// Sauvegarder une clé (appelé à chaque changement)
 app.post("/api/data/:key", (req, res) => {
   const { key } = req.params;
   const allowed = ["pilots", "paris", "parisOuverts", "resultats"];
@@ -113,15 +95,13 @@ app.post("/api/data/:key", (req, res) => {
   res.json({ ok: true });
 });
 
-// Reset — efface paris et résultats mais conserve les pilotes
 app.delete("/api/data", (req, res) => {
   db.prepare("DELETE FROM store WHERE key != 'pilots'").run();
-  console.log("  🗑 Paris et résultats réinitialisés (pilotes conservés)");
+  console.log("  🗑 Paris et résultats réinitialisés");
   res.json({ ok: true });
 });
 
-// ─── ROUTES EMAIL ─────────────────────────────────────────────────────────────
-
+// ─── EMAILS ───────────────────────────────────────────────────────────────────
 const baseStyle = `
   body{margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;}
   .w{max-width:600px;margin:40px auto;background:#fff;border-radius:8px;overflow:hidden;border:1px solid #e0e0e0;}
@@ -143,94 +123,42 @@ const baseStyle = `
   .bw{display:inline-block;background:#facc15;color:#000;font-weight:bold;padding:3px 12px;border-radius:20px;font-size:13px;}
   .bl{display:inline-block;background:#333;color:#facc15;font-weight:bold;padding:3px 12px;border-radius:20px;font-size:13px;}
 `;
-
 const footer = () => `<div class="f"><p><span>VOLTIGE PARIS</span> — Application de paris de voltige aérienne</p><p style="margin-top:4px;">Les bières seront à régler lors de la soirée 🍺</p></div>`;
 const rows   = (data) => `<div class="recap"><table>${data.map(([l,v])=>`<tr><td>${l}</td><td><strong>${v}</strong></td></tr>`).join("")}</table></div>`;
 
-function htmlConfirmation(pari, catLabel, desc) {
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${baseStyle}</style></head><body><div class="w">
-    <div class="h"><h1>✈ Voltige Paris 🍺</h1><p>Confirmation de pari</p></div>
-    <div class="b">
-      <p>Bonjour <strong>${pari.parieur}</strong>,</p>
-      <p>Votre pari a bien été enregistré. Bonne chance !</p>
-      ${rows([["Catégorie",catLabel],["Pari",desc],["Mise",pari.mise+" 🍺"],["Cote",pari.cote+"x"],["Gain potentiel",pari.gain+" 🍺"],["Heure",pari.date]])}
-      <div class="hl"><div class="m">${pari.gain} 🍺</div><div class="l">Gain potentiel si vous gagnez</div></div>
-    </div>${footer()}</div></body></html>`;
-}
+const htmlConfirmation = (pari, catLabel, desc) => `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${baseStyle}</style></head><body><div class="w"><div class="h"><h1>✈ Voltige Paris 🍺</h1><p>Confirmation de pari</p></div><div class="b"><p>Bonjour <strong>${pari.parieur}</strong>,</p><p>Votre pari a bien été enregistré. Bonne chance !</p>${rows([["Catégorie",catLabel],["Pari",desc],["Mise",pari.mise+" 🍺"],["Cote",pari.cote+"x"],["Gain potentiel",pari.gain+" 🍺"],["Heure",pari.date]])}<div class="hl"><div class="m">${pari.gain} 🍺</div><div class="l">Gain potentiel si vous gagnez</div></div></div>${footer()}</div></body></html>`;
 
-function htmlGagne(pari, gainFinal, catLabel, desc) {
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${baseStyle}</style></head><body><div class="w">
-    <div class="h"><h1>✈ Voltige Paris 🍺</h1><p>Résultat de votre pari</p></div>
-    <div class="b">
-      <p>Bonjour <strong>${pari.parieur}</strong>,</p>
-      <p>Excellent pronostic ! <span class="bw">🏆 GAGNÉ</span></p>
-      ${rows([["Catégorie",catLabel],["Pari",desc],["Mise initiale",pari.mise+" 🍺"],["Cote",pari.cote+"x"],["Gain remporté",gainFinal+" 🍺"],["Bénéfice net","+"+(gainFinal-pari.mise)+" 🍺"]])}
-      <div class="hl"><div class="m">🏆 ${gainFinal} 🍺</div><div class="l">Bières remportées</div></div>
-      <p>Présentez cet email lors de la soirée pour récupérer vos gains.</p>
-    </div>${footer()}</div></body></html>`;
-}
+const htmlGagne = (pari, gainFinal, catLabel, desc) => `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${baseStyle}</style></head><body><div class="w"><div class="h"><h1>✈ Voltige Paris 🍺</h1><p>Résultat de votre pari</p></div><div class="b"><p>Bonjour <strong>${pari.parieur}</strong>,</p><p>Excellent pronostic ! <span class="bw">🏆 TIRÉ AU SORT</span></p>${rows([["Catégorie",catLabel],["Pari",desc],["Mise",pari.mise+" 🍺"],["Cote",pari.cote+"x"],["Bières offertes","+"+gainFinal+" 🍺"]])}<div class="hl"><div class="m">🏆 +${gainFinal} 🍺</div><div class="l">Bières offertes à récupérer au bar</div></div><p>Présentez cet email pour récupérer vos bières gratuites.</p></div>${footer()}</div></body></html>`;
 
-function htmlPerdu(pari, catLabel, desc) {
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${baseStyle}</style></head><body><div class="w">
-    <div class="h"><h1>✈ Voltige Paris 🍺</h1><p>Résultat de votre pari</p></div>
-    <div class="b">
-      <p>Bonjour <strong>${pari.parieur}</strong>,</p>
-      <p>Cette fois-ci ça n'a pas joué. <span class="bl">😔 PERDU</span></p>
-      ${rows([["Catégorie",catLabel],["Pari",desc],["Mise perdue",pari.mise+" 🍺"],["Cote",pari.cote+"x"]])}
-      <p style="color:#888;font-size:13px;margin-top:20px;">Meilleure chance lors du prochain programme !</p>
-    </div>${footer()}</div></body></html>`;
-}
+const htmlBonPronostic = (pari, catLabel, desc) => `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${baseStyle}</style></head><body><div class="w"><div class="h"><h1>✈ Voltige Paris 🍺</h1><p>Résultat de votre pari</p></div><div class="b"><p>Bonjour <strong>${pari.parieur}</strong>,</p><p>Vous aviez le bon pronostic ! <span class="bw">🍺 BON PRONOSTIC</span></p><p>Malheureusement vous n'avez pas été tiré au sort cette fois-ci.</p>${rows([["Catégorie",catLabel],["Pari",desc],["Mise",pari.mise+" 🍺"],["Cote",pari.cote+"x"]])}<p style="color:#555;font-size:14px;margin-top:16px;">Votre pronostic était correct, bravo ! Tentez votre chance au prochain programme. 🎲</p></div>${footer()}</div></body></html>`;
 
-function htmlBonPronostic(pari, catLabel, desc) {
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${baseStyle}</style></head><body><div class="w">
-    <div class="h"><h1>✈ Voltige Paris 🍺</h1><p>Résultat de votre pari</p></div>
-    <div class="b">
-      <p>Bonjour <strong>${pari.parieur}</strong>,</p>
-      <p>Bravo, vous aviez le bon pronostic ! <span class="bw">🍺 BON PRONOSTIC</span></p>
-      <p>Malheureusement vous n'avez pas été tiré au sort parmi les gagnants cette fois-ci.</p>
-      ${rows([["Catégorie",catLabel],["Pari",desc],["Mise",pari.mise+" 🍺"],["Cote",pari.cote+"x"]])}
-      <p style="color:#555;font-size:14px;margin-top:16px;">Votre pronostic était correct — vous pouvez en être fier ! Tentez votre chance au prochain programme. 🎲</p>
-    </div>${footer()}</div></body></html>`;
-}
+const htmlPerdu = (pari, catLabel, desc) => `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${baseStyle}</style></head><body><div class="w"><div class="h"><h1>✈ Voltige Paris 🍺</h1><p>Résultat de votre pari</p></div><div class="b"><p>Bonjour <strong>${pari.parieur}</strong>,</p><p>Cette fois-ci ça n'a pas joué. <span class="bl">😔 PERDU</span></p>${rows([["Catégorie",catLabel],["Pari",desc],["Mise",pari.mise+" 🍺"],["Cote",pari.cote+"x"]])}<p style="color:#888;font-size:13px;margin-top:20px;">Meilleure chance lors du prochain programme !</p></div>${footer()}</div></body></html>`;
 
 async function sendEmail(to, subject, html) {
-  console.log(`  ✉️  À : ${to} | Objet : ${subject}`);
+  console.log(`  ✉️  À : ${to} | ${subject}`);
   const { data, error } = await resend.emails.send({ from: FROM_EMAIL, to, subject, html });
   if (error) { console.error("  ❌ Resend :", JSON.stringify(error)); throw new Error(JSON.stringify(error)); }
-  console.log("  ✅ Envoyé — ID :", data.id);
+  console.log("  ✅ ID :", data.id);
 }
 
 app.post("/api/email/confirmation", async (req, res) => {
   const { pari, catLabel, desc } = req.body;
-  try {
-    await sendEmail(pari.email, "Confirmation de votre pari ✈ " + desc, htmlConfirmation(pari, catLabel, desc));
-    res.json({ ok: true });
-  } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+  try { await sendEmail(pari.email, "Confirmation de votre pari ✈ " + desc, htmlConfirmation(pari, catLabel, desc)); res.json({ ok: true }); }
+  catch (err) { res.status(500).json({ ok: false, error: err.message }); }
 });
 
-app.post("/api/email/resultat", async (req, res) => {
-  const { pari, gagne, gainFinal, catLabel, desc } = req.body;
-  try {
-    const html    = gagne ? htmlGagne(pari, gainFinal, catLabel, desc) : htmlPerdu(pari, catLabel, desc);
-    const subject = gagne ? "🏆 Vous avez gagné " + gainFinal + " bières !" : "😔 Résultat de votre pari — " + desc;
-    await sendEmail(pari.email, subject, html);
-    res.json({ ok: true });
-  } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
-});
-
-// ─── ROUTE STATUT (3 types) ───────────────────────────────────────────────────
 app.post("/api/email/statut", async (req, res) => {
   const { pari, statut, bonusBieres, catLabel, desc } = req.body;
   try {
     let html, subject;
     if (statut === "gagne_tire") {
-      html    = htmlGagne(pari, bonusBieres, catLabel, desc);
-      subject = "🏆 Vous avez été tiré au sort — " + bonusBieres + " bières offertes !";
+      html = htmlGagne(pari, bonusBieres, catLabel, desc);
+      subject = "🏆 Tiré au sort — +" + bonusBieres + " bières offertes !";
     } else if (statut === "gagne_non_tire") {
-      html    = htmlBonPronostic(pari, catLabel, desc);
+      html = htmlBonPronostic(pari, catLabel, desc);
       subject = "🍺 Bon pronostic ! (non tiré au sort cette fois)";
     } else {
-      html    = htmlPerdu(pari, catLabel, desc);
+      html = htmlPerdu(pari, catLabel, desc);
       subject = "😔 Résultat de votre pari — " + desc;
     }
     await sendEmail(pari.email, subject, html);
@@ -238,13 +166,19 @@ app.post("/api/email/statut", async (req, res) => {
   } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
 });
 
-// Test
 app.get("/test", async (req, res) => {
   try {
-    const fakePari = { parieur:"Test", email:"votre@email.com", mise:3, cote:1.8, gain:5, date:"12:00:00" };
-    await sendEmail(fakePari.email, "Test Voltige Paris", htmlConfirmation(fakePari, "Unlimited", "Gagnant : Test — Général"));
+    const fakePari = { parieur:"Test", email:"votre@email.com", mise:2, cote:4.5, gain:4, date:"12:00:00" };
+    await sendEmail(fakePari.email, "Test Voltige Paris", htmlConfirmation(fakePari, "Elite", "Gagnant : Oddon — Général"));
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+});
+
+// ─── FRONT STATIQUE (en production) ──────────────────────────────────────────
+// Cette section doit être EN DERNIER — après toutes les routes API
+app.use(express.static(join(__dirname, "dist")));
+app.get("*", (req, res) => {
+  res.sendFile(join(__dirname, "dist", "index.html"));
 });
 
 const PORT = process.env.PORT || 3001;

@@ -88,7 +88,7 @@ function calculerCoteNote(paris, piloteId, fourchetteId, programme) {
   return Math.min(3.5, Math.max(1.05, Math.round((base + influence) * 100) / 100));
 }
 
-const EMAIL_API = "http://localhost:3001";
+const EMAIL_API = "";
 
 // ─── EMAIL ────────────────────────────────────────────────────────────────────
 
@@ -134,7 +134,7 @@ async function envoyerEmailStatut(pari, statut, bonusBieres) {
     const desc      = pari.typePari === "note"
       ? "Note " + (pari.fourchetteLabel ?? "") + " de " + pari.piloteNom + " (" + prog + ")"
       : typeLabel + " : " + pari.piloteNom + " — " + prog;
-    const r = await fetch("http://localhost:3001/api/email/statut", {
+    const r = await fetch("/api/email/statut", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ pari, statut, bonusBieres, catLabel, desc }),
     });
@@ -1370,7 +1370,7 @@ function PageAdmin({ pilots, setPilots, paris, setParis, parisOuverts, setParisO
           <button onClick={() => setAuth(false)} className="text-stone-400 hover:text-stone-700 text-xs font-medium transition-colors">Déco.</button>
           <button onClick={async () => {
             if (window.confirm("Réinitialiser les paris et résultats ?\n\n(Les pilotes sont conservés dans la base de données)")) {
-              await fetch("http://localhost:3001/api/data", { method: "DELETE" }).catch(()=>{});
+              await fetch("/api/data", { method: "DELETE" }).catch(()=>{});
               window.location.reload();
             }
           }} className="text-red-400 hover:text-red-600 text-xs font-medium transition-colors">🗑 Reset</button>
@@ -1485,7 +1485,7 @@ export default function App() {
   const [parisOuverts, setParisOuverts] = useState(true);
   const [resultats,    setResultats]    = useState({});
 
-  const API = "http://localhost:3001"; // ← remplacez par votre domaine en prod
+  const API = ""; // ← remplacez par votre domaine en prod
 
   // Chargement initial depuis le serveur
   useEffect(() => {
