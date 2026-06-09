@@ -177,7 +177,7 @@ app.get("/test", async (req, res) => {
 // ─── FRONT STATIQUE (en production) ──────────────────────────────────────────
 // Cette section doit être EN DERNIER — après toutes les routes API
 app.use(express.static(join(__dirname, "dist")));
-app.get("*", (req, res) => {
+app.get("/{*path}", (req, res) => {
   res.sendFile(join(__dirname, "dist", "index.html"));
 });
 
