@@ -567,10 +567,8 @@ function PageParis({ pilots, paris, addPari, setView, parisOuverts }) {
       {emailEnvoi==="sending" && <div className="flex items-center gap-2 text-stone-500 text-sm"><div className="w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />Génération email…</div>}
       {emailEnvoi?.ok && (
         <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4 w-full max-w-sm text-left text-sm space-y-2">
-          <div className="font-bold text-green-800">✉️ Email de confirmation généré</div>
+          <div className="font-bold text-green-800">✉️ Email généré</div>
           <div className="text-stone-600 text-xs">Objet : {emailEnvoi.objet}</div>
-          <details className="text-xs"><summary className="text-stone-500 cursor-pointer hover:text-stone-700">Voir l'email</summary>
-            <div className="mt-2 bg-white rounded-lg p-3 text-stone-700 border border-stone-200" dangerouslySetInnerHTML={{__html:emailEnvoi.corps}} /></details>
         </div>
       )}
       {emailEnvoi==="error" && <p className="text-red-500 text-sm">⚠️ Email non envoyé, pari enregistré.</p>}
@@ -766,7 +764,6 @@ function PageAdmin({ pilots, setPilots, paris, setParis, parisOuverts, setParisO
       <div className="w-full max-w-sm space-y-3">
         <InputF type="password" value={adminPass} onChange={e=>setAdminPass(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&adminPass==="admin123")setAuth(true);}} placeholder="Mot de passe admin" />
         <button onClick={() => {if(adminPass==="admin123")setAuth(true);else alert("Mot de passe incorrect");}} className="w-full py-3 bg-black text-yellow-400 font-bold rounded-xl text-sm uppercase transition-all hover:bg-stone-900">Connexion</button>
-        <p className="text-stone-400 text-xs text-center">Demo : admin123</p>
       </div>
     </div>
   );
@@ -1527,83 +1524,103 @@ export default function App() {
   );
 
   return (
-    <div className="min-h-screen bg-stone-50 text-stone-900" style={{fontFamily:"'DM Sans',sans-serif"}}>
+    <div className="min-h-screen text-stone-900 relative" style={{fontFamily:"'DM Sans',sans-serif"}}>
       <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
-      {/* Header */}
-      <div className="sticky top-0 z-50 bg-white border-b-2 border-stone-100">
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-yellow-400 text-sm font-black">✈</div>
-            <span className="font-black text-stone-900 text-sm tracking-wider" style={{fontFamily:"'Bebas Neue',sans-serif",letterSpacing:"0.1em"}}>PARIS VOLTIGE AERIENNE</span>
-            <span>🍺</span>
-          </div>
-          <div className="flex items-center gap-2">
-            {!parisOuverts && <Pill v="red">🔒</Pill>}
-            <div className={`w-1.5 h-1.5 rounded-full ${parisOuverts?"bg-green-500 animate-pulse":"bg-red-400"}`} />
-            <span className={`text-xs font-bold ${parisOuverts?"text-green-600":"text-red-500"}`}>{parisOuverts?"LIVE":"CLÔ"}</span>
-            {paris.length>0 && <Pill v="black">{totalBieres} 🍺</Pill>}
+      {/* Image de fond */}
+      <div className="fixed inset-0 z-0" style={{
+        backgroundImage: "url('/beech.jpg')",
+        backgroundSize: "contain",
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "center center",
+        opacity: 0.60,
+        filter: "blur(1px)",
+      }} />
+
+      {/* Contenu */}
+      <div className="relative z-10 min-h-screen">
+
+        {/* Header */}
+        <div className="sticky top-0 z-50 bg-white border-b-2 border-stone-100">
+          <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-yellow-400 text-sm font-black">✈</div>
+              <span className="font-black text-stone-900 text-sm tracking-wider" style={{fontFamily:"'Bebas Neue',sans-serif",letterSpacing:"0.1em"}}>AEROFESTIVAL 2026</span>
+              <span>🍺</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {!parisOuverts && <Pill v="red">🔒</Pill>}
+              <div className={`w-1.5 h-1.5 rounded-full ${parisOuverts?"bg-green-500 animate-pulse":"bg-red-400"}`} />
+              <span className={`text-xs font-bold ${parisOuverts?"text-green-600":"text-red-500"}`}>{parisOuverts?"LIVE":"CLÔ"}</span>
+              {paris.length>0 && <Pill v="black">{totalBieres} 🍺</Pill>}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Content */}
-      <div className="max-w-2xl mx-auto px-4 py-5 pb-28">
-        {view==="accueil" && <PageAccueil pilots={pilots} paris={paris} setView={setView} setSelectedPilot={setSelectedPilot} />}
-        {view==="carousel" && <PageCarousel pilots={pilots} paris={paris} />}
-        {view==="classements" && <PageClassements pilots={pilots} paris={paris} />}
-        {view==="pilotes" && (
-          <div className="space-y-4">
-            <h2 className="font-black text-stone-900 text-2xl" style={{fontFamily:"'Bebas Neue',sans-serif",letterSpacing:"0.05em"}}>LES PILOTES</h2>
-            {CATEGORIES.map(cat => {
-              const cp = pilots.filter(p=>p.categorieId===cat.id);
-              if (!cp.length) return null;
-              return (
-                <div key={cat.id}>
-                  <div className="flex items-center gap-2 mb-2"><span className="text-lg">{cat.icon}</span><h3 className="font-black text-stone-700 text-sm uppercase tracking-wider">{cat.label}</h3><Pill v="gray">{cp.length}</Pill></div>
-                  <div className="space-y-2">
-                    {cp.map(p => (
-                      <div key={p.id} onClick={() => {setSelectedPilot(p);setView("pilote");}} className="flex items-center gap-4 bg-white border-2 border-stone-100 hover:border-yellow-400 rounded-2xl p-4 cursor-pointer transition-all">
-                        <Avatar initials={p.photo} size="md" />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2"><NF nat={p.nationalite} /><span className="font-black text-stone-900">{p.prenom} {p.nom}</span></div>
-                          <div className="text-stone-500 text-sm">{p.avion}</div>
-                          <div className="flex gap-1.5 mt-1"><Pill v="yellow">{p.podiums} Podiums</Pill><Pill v="black">{p.score_moyen}/100</Pill></div>
+        {/* Content */}
+        <div className="max-w-2xl bg-white mx-auto px-4 py-5 pb-28">
+          {view==="accueil" && <PageAccueil pilots={pilots} paris={paris} setView={setView} setSelectedPilot={setSelectedPilot} />}
+          {view==="carousel" && <PageCarousel pilots={pilots} paris={paris} />}
+          {view==="classements" && <PageClassements pilots={pilots} paris={paris} />}
+          {view==="pilotes" && (
+            <div className="space-y-4">
+              <h2 className="font-black text-stone-900 text-2xl" style={{fontFamily:"'Bebas Neue',sans-serif",letterSpacing:"0.05em"}}>LES PILOTES</h2>
+              {CATEGORIES.map(cat => {
+                const cp = pilots.filter(p=>p.categorieId===cat.id);
+                if (!cp.length) return null;
+                return (
+                  <div key={cat.id}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg">{cat.icon}</span>
+                      <h3 className="font-black text-stone-700 text-sm uppercase tracking-wider">{cat.label}</h3>
+                      <Pill v="gray">{cp.length}</Pill>
+                    </div>
+                    <div className="space-y-2">
+                      {cp.map(p => (
+                        <div key={p.id} onClick={() => {setSelectedPilot(p);setView("pilote");}}
+                          className="flex items-center gap-4 bg-white border-2 border-stone-100 hover:border-yellow-400 rounded-2xl p-4 cursor-pointer transition-all">
+                          <Avatar initials={p.photo} size="md" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2"><NF nat={p.nationalite} /><span className="font-black text-stone-900">{p.prenom} {p.nom}</span></div>
+                            <div className="text-stone-500 text-sm">{p.avion}</div>
+                            <div className="flex gap-1.5 mt-1"><Pill v="yellow">{p.podiums} Podiums</Pill><Pill v="black">{p.score_moyen}/100</Pill></div>
+                          </div>
+                          <span className="text-stone-300 text-lg">›</span>
                         </div>
-                        <span className="text-stone-300 text-lg">›</span>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
+                );
+              })}
+            </div>
+          )}
+          {view==="pilote" && selectedPilot && (
+            <FichePilote pilot={pilots.find(p=>p.id===selectedPilot.id)??selectedPilot} setView={setView} />
+          )}
+          {view==="pari" && (
+            <PageParis pilots={pilots} paris={paris} addPari={p=>setParis(prev=>[...prev,p])} setView={setView} parisOuverts={parisOuverts} />
+          )}
+          {view==="admin" && (
+            <PageAdmin pilots={pilots} setPilots={setPilots} paris={paris} setParis={setParis} parisOuverts={parisOuverts} setParisOuverts={setParisOuverts} resultats={resultats} setResultats={setResultats} />
+          )}
+        </div>
+
+        {/* Bottom Nav */}
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-stone-100">
+          <div className="max-w-2xl mx-auto px-1 py-2 flex justify-around">
+            {NAV.map(item => {
+              const active = view===item.id || (view==="pilote" && item.id==="pilotes");
+              return (
+                <button key={item.id} onClick={() => setView(item.id)}
+                  className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-all ${active?"bg-yellow-400 text-black":"text-stone-400 hover:text-stone-700"}`}>
+                  <span className="text-base">{item.icon}</span>
+                  <span className="text-xs font-bold">{item.label}</span>
+                </button>
               );
             })}
           </div>
-        )}
-        {view==="pilote" && selectedPilot && (
-          <FichePilote pilot={pilots.find(p=>p.id===selectedPilot.id)??selectedPilot} setView={setView} />
-        )}
-        {view==="pari" && (
-          <PageParis pilots={pilots} paris={paris} addPari={p=>setParis(prev=>[...prev,p])} setView={setView} parisOuverts={parisOuverts} />
-        )}
-        {view==="admin" && (
-          <PageAdmin pilots={pilots} setPilots={setPilots} paris={paris} setParis={setParis} parisOuverts={parisOuverts} setParisOuverts={setParisOuverts} resultats={resultats} setResultats={setResultats} />
-        )}
-      </div>
-
-      {/* Bottom Nav */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-stone-100">
-        <div className="max-w-2xl mx-auto px-1 py-2 flex justify-around">
-          {NAV.map(item => {
-            const active = view===item.id || (view==="pilote" && item.id==="pilotes");
-            return (
-              <button key={item.id} onClick={() => setView(item.id)}
-                className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-all ${active?"bg-yellow-400 text-black":"text-stone-400 hover:text-stone-700"}`}>
-                <span className="text-base">{item.icon}</span>
-                <span className="text-xs font-bold">{item.label}</span>
-              </button>
-            );
-          })}
         </div>
+
       </div>
     </div>
   );
