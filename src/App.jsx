@@ -1533,7 +1533,7 @@ export default function App() {
         backgroundSize: "cover",
         backgroundRepeat: "no-repeat",
         backgroundPosition: "center center",
-        opacity: 0.60,
+        opacity: 0.20,
         filter: "blur(1px)",
       }} />
 
