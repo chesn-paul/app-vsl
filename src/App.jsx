@@ -1530,7 +1530,7 @@ export default function App() {
       {/* Image de fond */}
       <div className="fixed inset-0 z-0" style={{
         backgroundImage: "url('/beech.jpg')",
-        backgroundSize: "contain",
+        backgroundSize: "cover",
         backgroundRepeat: "no-repeat",
         backgroundPosition: "center center",
         opacity: 0.60,
