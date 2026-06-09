@@ -51,35 +51,24 @@ function calculerCotes(pilots, paris, programme, typePari, categorieId) {
     return p.typePari === typePari && progMatch && p.categorieId === categorieId && !p.clos;
   });
   const totalMise = parisRelatifs.reduce((s, p) => s + p.mise, 0) || 1;
-  const multType = { gagnant:1.0, top3:3.0, bottom3:3.0, note:1.5 };
-  const mult = multType[typePari] || 1;
-
-  // Forces brutes
-  const raw = pilots.map(p => ({
-    id: p.id,
-    f: forceBase(p, programme) * mult
-  }));
-
-  // Normalisation relative : on divise par la force minimale
-  // → le meilleur pilote a une force relative élevée, le moins bon proche de 1
-  const minF = Math.min(...raw.map(x => x.f));
-  const maxF = Math.max(...raw.map(x => x.f));
   const plafond = 3;
+
   const forces = pilots.map(p => {
     const baseForce = forceBase(p, programme);
-    // Pour bottom3 : on inverse la force — le plus faible devient le plus "probable"
+    // bottom3 : inverser la force — le plus faible devient le plus probable
     const base = typePari === "bottom3"
-      ? (1 / Math.max(baseForce, 1)) * 100000 * mult
-      : Math.pow(baseForce, 12) * mult;
+      ? Math.pow(1 / Math.max(baseForce, 1) * 10000, 12)
+      : Math.pow(baseForce, 12);
     const misesPilote = parisRelatifs.filter(x => x.piloteId === p.id).reduce((s, x) => s + x.mise, 0);
     const facteur = 1 - (misesPilote / totalMise) * 0.4;
     return { id: p.id, force: base * Math.max(0.15, facteur) };
   });
+
   const total = forces.reduce((s, f) => s + f.force, 0);
   const result = {};
   forces.forEach(f => {
     const prob = total > 0 ? f.force / total : 1 / forces.length;
-    const raw = (!isNaN(prob) && prob > 0) ? (1 / prob) * 0.25 : 1.5;
+    const raw  = (!isNaN(prob) && prob > 0) ? (1 / prob) * 0.45 : 1.5;
     result[f.id] = Math.min(plafond, Math.max(1.01, Math.round(raw * 100) / 100));
   });
   return result;
