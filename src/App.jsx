@@ -15,8 +15,8 @@ const CATEGORIES = [
 
 const TYPES_PARI = [
   { id: "gagnant", label: "Gagnant",        desc: "Pariez sur le 1er du classement",          icon: "🥇", scope: "pilote" },
-  { id: "top3",    label: "Top 3",          desc: "Pariez sur un pilote dans le top 3",        icon: "🏅", scope: "pilote" },
-  { id: "bottom3", label: "3 derniers",     desc: "Pariez sur un pilote dans les 3 derniers",  icon: "🔻", scope: "pilote" },
+  { id: "top3",    label: "Top 2",          desc: "Pariez sur un pilote dans le top 2",        icon: "🏅", scope: "pilote" },
+  { id: "bottom3", label: "2 derniers",     desc: "Pariez sur un pilote dans les 2 derniers",  icon: "🔻", scope: "pilote" },
   { id: "note",    label: "Note d'un pilote",desc: "Pariez sur la fourchette de note",          icon: "📐", scope: "note"   },
 ];
 
@@ -64,9 +64,13 @@ function calculerCotes(pilots, paris, programme, typePari, categorieId) {
   // → le meilleur pilote a une force relative élevée, le moins bon proche de 1
   const minF = Math.min(...raw.map(x => x.f));
   const maxF = Math.max(...raw.map(x => x.f));
-  const plafond = 8;
+  const plafond = 3;
   const forces = pilots.map(p => {
-    const base = Math.pow(forceBase(p, programme), 12) * mult;
+    const baseForce = forceBase(p, programme);
+    // Pour bottom3 : on inverse la force — le plus faible devient le plus "probable"
+    const base = typePari === "bottom3"
+      ? (1 / Math.max(baseForce, 1)) * 100000 * mult
+      : Math.pow(baseForce, 12) * mult;
     const misesPilote = parisRelatifs.filter(x => x.piloteId === p.id).reduce((s, x) => s + x.mise, 0);
     const facteur = 1 - (misesPilote / totalMise) * 0.4;
     return { id: p.id, force: base * Math.max(0.15, facteur) };
@@ -75,7 +79,7 @@ function calculerCotes(pilots, paris, programme, typePari, categorieId) {
   const result = {};
   forces.forEach(f => {
     const prob = total > 0 ? f.force / total : 1 / forces.length;
-    const raw  = (!isNaN(prob) && prob > 0) ? 0.25 / prob : 1.5;
+    const raw = (!isNaN(prob) && prob > 0) ? (1 / prob) * 0.25 : 1.5;
     result[f.id] = Math.min(plafond, Math.max(1.01, Math.round(raw * 100) / 100));
   });
   return result;
@@ -705,14 +709,14 @@ function PageParis({ pilots, paris, addPari, setView, parisOuverts }) {
             <div className="font-black text-stone-900 text-xl">{coteFinale}x</div>
           </div>
           <div>
-            <label className="text-xs font-bold text-stone-500 uppercase tracking-wider block mb-2">Nombre de 🍺</label>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setMise(m => String(Math.max(0,parseInt(m||"0")-1)))} className="w-12 h-12 bg-stone-100 hover:bg-stone-200 rounded-xl font-black text-stone-800 text-xl transition-all flex-shrink-0">−</button>
-              <input type="number" min="1" value={mise} onChange={e => setMise(e.target.value)} className="flex-1 bg-white border-2 border-stone-200 focus:border-yellow-400 text-stone-900 rounded-xl px-4 py-3 text-xl font-black text-center focus:outline-none" />
-              <button onClick={() => setMise(m => String(parseInt(m||"0")+1))} className="w-12 h-12 bg-stone-100 hover:bg-stone-200 rounded-xl font-black text-stone-800 text-xl transition-all flex-shrink-0">+</button>
-            </div>
-            <div className="flex gap-2 mt-2">
-              {[1,2,5,10].map(n => <button key={n} onClick={() => setMise(String(n))} className="flex-1 py-2 bg-stone-100 hover:bg-yellow-400 hover:text-black border-2 border-stone-100 hover:border-yellow-400 text-stone-600 rounded-lg text-sm font-bold transition-all">{n}🍺</button>)}
+            <label className="text-xs font-bold text-stone-500 uppercase tracking-wider block mb-2">Mise en 🍺</label>
+            <div className="grid grid-cols-3 gap-3">
+              {[1, 3, 5].map(n => (
+                <button key={n} onClick={() => setMise(String(n))}
+                  className={`py-4 rounded-xl font-black text-lg border-2 transition-all ${mise===String(n)?"bg-yellow-400 border-yellow-400 text-black":"bg-white border-stone-200 text-stone-600 hover:border-yellow-400"}`}>
+                  {n} 🍺
+                </button>
+              ))}
             </div>
           </div>
           {mise && parseInt(mise)>0 && (
@@ -1040,8 +1044,8 @@ function PageAdmin({ pilots, setPilots, paris, setParis, parisOuverts, setParisO
       const total = clPr.length;
       const rang  = clPr.findIndex(x => x.pilot.id === pari.piloteId);
       if (pari.typePari === "gagnant")  return rang === 0;
-      if (pari.typePari === "top3")     return rang >= 0 && rang < 3;
-      if (pari.typePari === "bottom3")  return rang >= 0 && rang >= total - 3;
+      if (pari.typePari === "top3")     return rang >= 0 && rang < 2;
+      if (pari.typePari === "bottom3")  return rang >= 0 && rang >= total - 2;
       if (pari.typePari === "note") {
         const note = isGeneral
           ? clPr.find(x => x.pilot.id === pari.piloteId)?.moyenne
