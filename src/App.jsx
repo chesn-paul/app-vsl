@@ -202,8 +202,7 @@ function PageAccueil({ pilots, paris, setView, setSelectedPilot }) {
           {totalBieres > 0 && <p className="text-yellow-400 font-bold text-sm">{totalBieres} 🍺 en jeu · {paris.filter(p=>!p.clos).length} paris actifs</p>}
           <div className="flex gap-2 mt-4 flex-wrap">
             <button onClick={() => setView("pari")} className="px-5 py-2.5 bg-yellow-400 hover:bg-yellow-300 text-black font-bold rounded-xl text-sm uppercase tracking-wider transition-all">Parier 🍺</button>
-            <button onClick={() => setView("carousel")} className="px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl text-sm uppercase tracking-wider transition-all">📺 Live</button>
-            <button onClick={() => setView("regles")} className="px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl text-sm uppercase tracking-wider transition-all">📖 Règles</button>
+            <button onClick={() => setView("regles")} className="px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl text-sm uppercase tracking-wider transition-all">📖 Comment ça marche ?</button>
           </div>
         </div>
       </div>
