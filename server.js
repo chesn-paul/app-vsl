@@ -128,7 +128,27 @@ const rows   = (data) => `<div class="recap"><table>${data.map(([l,v])=>`<tr><td
 
 const htmlConfirmation = (pari, catLabel, desc) => `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${baseStyle}</style></head><body><div class="w"><div class="h"><h1>✈ Voltige Paris 🍺</h1><p>Confirmation de pari</p></div><div class="b"><p>Bonjour <strong>${pari.parieur}</strong>,</p><p>Votre pari a bien été enregistré. Bonne chance !</p>${rows([["Catégorie",catLabel],["Pari",desc],["Mise",pari.mise+" 🍺"],["Cote",pari.cote+"x"],["Gain potentiel",pari.gain+" 🍺"],["Heure",pari.date]])}<div class="hl"><div class="m">${pari.gain} 🍺</div><div class="l">Gain potentiel si vous gagnez</div></div></div>${footer()}</div></body></html>`;
 
-const htmlGagne = (pari, gainFinal, catLabel, desc) => `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${baseStyle}</style></head><body><div class="w"><div class="h"><h1>✈ Voltige Paris 🍺</h1><p>Résultat de votre pari</p></div><div class="b"><p>Bonjour <strong>${pari.parieur}</strong>,</p><p>Excellent pronostic ! <span class="bw">🏆 TIRÉ AU SORT</span></p>${rows([["Catégorie",catLabel],["Pari",desc],["Mise",pari.mise+" 🍺"],["Cote",pari.cote+"x"],["Bières offertes","+"+gainFinal+" 🍺"]])}<div class="hl"><div class="m">🏆 +${gainFinal} 🍺</div><div class="l">Bières offertes à récupérer au bar</div></div><p>Présentez cet email pour récupérer vos bières gratuites.</p></div>${footer()}</div></body></html>`;
+const htmlGagne = (pari, gainFinal, catLabel, desc) => `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${baseStyle}</style></head><body>
+  <div class="w">
+    <div style="background:linear-gradient(135deg,#facc15 0%,#f59e0b 50%,#facc15 100%);padding:32px 36px;text-align:center;border-bottom:4px solid #000;">
+      <div style="font-size:52px;margin-bottom:8px;">🏆</div>
+      <div style="font-size:32px;font-weight:900;color:#000;letter-spacing:3px;text-transform:uppercase;font-family:Arial,sans-serif;">VOUS AVEZ GAGNÉ !</div>
+      <div style="font-size:14px;color:#000;margin-top:6px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;">Tiré au sort · Paris Aerofestival 2026</div>
+    </div>
+    <div style="background:#000;padding:20px 36px;text-align:center;">
+      <div style="font-size:42px;font-weight:900;color:#facc15;">+${gainFinal} 🍺</div>
+      <div style="font-size:12px;color:#999;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Bières offertes à récupérer au bar</div>
+    </div>
+    <div class="b">
+      <p>Bonjour <strong>${pari.parieur}</strong>,</p>
+      <p>Félicitations ! Votre pronostic était correct et vous avez été <strong>tiré au sort</strong> parmi les gagnants. Rendez-vous au bar pour récupérer vos bières gratuites.</p>
+      ${rows([["Catégorie",catLabel],["Pari",desc],["Mise",pari.mise+" 🍺"],["Cote",pari.cote+"x"],["Bières offertes","+"+gainFinal+" 🍺"]])}
+      <p style="color:#888;font-size:13px;margin-top:16px;">Présentez cet email au bar pour récupérer vos gains.</p>
+    </div>
+    ${footer()}
+  </div>
+</body></html>`;
+
 
 const htmlBonPronostic = (pari, catLabel, desc) => `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${baseStyle}</style></head><body><div class="w"><div class="h"><h1>✈ Voltige Paris 🍺</h1><p>Résultat de votre pari</p></div><div class="b"><p>Bonjour <strong>${pari.parieur}</strong>,</p><p>Vous aviez le bon pronostic ! <span class="bw">🍺 BON PRONOSTIC</span></p><p>Malheureusement vous n'avez pas été tiré au sort cette fois-ci.</p>${rows([["Catégorie",catLabel],["Pari",desc],["Mise",pari.mise+" 🍺"],["Cote",pari.cote+"x"]])}<p style="color:#555;font-size:14px;margin-top:16px;">Votre pronostic était correct, bravo ! Tentez votre chance au prochain programme. 🎲</p></div>${footer()}</div></body></html>`;
 

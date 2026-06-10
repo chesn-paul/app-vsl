@@ -160,7 +160,7 @@ const Avatar = ({ initials, size="md" }) => {
 };
 
 const CoteTag = ({ value, highlight }) => {
-  const color = value <= 2 ? "bg-green-200 text-green-900" : value <= 5 ? "bg-lime-100 text-lime-800" : value <= 2 ? "bg-yellow-100 text-yellow-800" : value <= 6 ? "bg-orange-100 text-orange-800" : "bg-red-100 text-red-800";
+  const color = value <= 1.5 ? "bg-green-200 text-green-900" : value <= 2.5 ? "bg-lime-100 text-lime-800" : value <= 1.5 ? "bg-yellow-100 text-yellow-800" : value <= 2.5 ? "bg-orange-100 text-orange-800" : "bg-red-100 text-red-800";
   if (highlight) return <div className="text-center px-3 py-1.5 rounded-lg font-black text-base bg-yellow-400 text-black">{value}x</div>;
   return <div className={`text-center px-2 py-1 rounded-lg font-black text-sm ${color}`}>{value}x</div>;
 };
@@ -200,9 +200,10 @@ function PageAccueil({ pilots, paris, setView, setSelectedPilot }) {
           </h1>
           <p className="text-stone-400 text-sm mb-1">6 catégories · Pariez en 🍺 · Cotes dynamiques</p>
           {totalBieres > 0 && <p className="text-yellow-400 font-bold text-sm">{totalBieres} 🍺 en jeu · {paris.filter(p=>!p.clos).length} paris actifs</p>}
-          <div className="flex gap-2 mt-4">
+          <div className="flex gap-2 mt-4 flex-wrap">
             <button onClick={() => setView("pari")} className="px-5 py-2.5 bg-yellow-400 hover:bg-yellow-300 text-black font-bold rounded-xl text-sm uppercase tracking-wider transition-all">Parier 🍺</button>
             <button onClick={() => setView("carousel")} className="px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl text-sm uppercase tracking-wider transition-all">📺 Live</button>
+            <button onClick={() => setView("regles")} className="px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl text-sm uppercase tracking-wider transition-all">📖 Règles</button>
           </div>
         </div>
       </div>
@@ -569,8 +570,7 @@ function PageParis({ pilots, paris, addPari, setView, parisOuverts }) {
       {emailEnvoi==="sending" && <div className="flex items-center gap-2 text-stone-500 text-sm"><div className="w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />Génération email…</div>}
       {emailEnvoi?.ok && (
         <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4 w-full max-w-sm text-left text-sm space-y-2">
-          <div className="font-bold text-green-800">✉️ Email généré</div>
-          <div className="text-stone-600 text-xs">Objet : {emailEnvoi.objet}</div>
+          <div className="font-bold text-green-800">✉️ Email envoyé</div>
         </div>
       )}
       {emailEnvoi==="error" && <p className="text-red-500 text-sm">⚠️ Email non envoyé, pari enregistré.</p>}
@@ -1463,6 +1463,81 @@ function PageAdmin({ pilots, setPilots, paris, setParis, parisOuverts, setParisO
 // ─── PAGE ADMIN — MODE SAISIE RÉSULTATS ───────────────────────────────────────
 // Injecté dans PageAdmin via le mode "saisieResultats" — voir plus haut
 
+// ─── REGLES ──────────────────────────────────────────────────────────────────────
+function PageRegles({ setView }) {
+  return (
+    <div className="space-y-5">
+      <button onClick={() => setView("accueil")} className="text-stone-500 hover:text-stone-900 text-sm font-medium flex items-center gap-1 transition-colors">← Retour</button>
+
+      <div className="bg-black rounded-2xl p-5">
+        <div className="text-yellow-400 text-xs font-bold uppercase tracking-widest mb-1">Paris Aerofestival 2026</div>
+        <h1 className="text-2xl font-black text-yellow-400 uppercase tracking-wide" style={{fontFamily:"'Bebas Neue',sans-serif",letterSpacing:"0.06em"}}>Comment ça marche ?</h1>
+        <p className="text-stone-500 text-sm mt-1">Tout le monde peut jouer — sans risque</p>
+      </div>
+
+      {/* Étape 1 */}
+      <div className="bg-white border-2 border-stone-100 rounded-2xl p-5">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 bg-yellow-400 rounded-xl flex items-center justify-center font-black text-black text-sm flex-shrink-0 mt-0.5">1</div>
+          <div className="flex-1">
+            <p className="font-black text-stone-900 mb-1">Faites votre pronostic</p>
+            <p className="text-stone-500 text-sm leading-relaxed">Choisissez un pilote, un type de pari et un programme. Vous recevez un email de confirmation. C'est gratuit et sans engagement.</p>
+            <div className="grid grid-cols-2 gap-2 mt-3">
+              {[["🏆","Gagnant (1er)"],["🏅","Top 2"],["🔻","2 Derniers"],["📐","Note du pilote"]].map(([icon,label]) => (
+                <div key={label} className="bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-xs text-stone-600">{icon} {label}</div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Étape 2 */}
+      <div className="bg-white border-2 border-stone-100 rounded-2xl p-5">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 bg-black rounded-xl flex items-center justify-center font-black text-yellow-400 text-sm flex-shrink-0 mt-0.5">2</div>
+          <div className="flex-1">
+            <p className="font-black text-stone-900 mb-1">Attendez les résultats</p>
+            <p className="text-stone-500 text-sm leading-relaxed">Après chaque programme, l'arbitre valide les résultats. Parmi tous les bons pronostics, un tirage au sort désigne les gagnants.</p>
+            <div className="bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 mt-3 text-xs text-stone-500 leading-relaxed">
+              ℹ️ Les paris à cote élevée ont plus de tickets dans le tirage — parier sur un outsider est récompensé.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Étape 3 */}
+      <div className="bg-white border-2 border-stone-100 rounded-2xl p-5">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 bg-black rounded-xl flex items-center justify-center font-black text-yellow-400 text-sm flex-shrink-0 mt-0.5">3</div>
+          <div className="flex-1">
+            <p className="font-black text-stone-900 mb-1">Si vous gagnez — email de l'arbitre</p>
+            <p className="text-stone-500 text-sm leading-relaxed">Vous recevez un email depuis <span className="font-bold text-stone-700">arbitre@pari-aerofestival.com</span> avec le détail de vos gains. Vérifiez vos spams !</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Étape 4 */}
+      <div className="bg-yellow-400 border-2 border-yellow-400 rounded-2xl p-5">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 bg-black rounded-xl flex items-center justify-center font-black text-yellow-400 text-sm flex-shrink-0 mt-0.5">4</div>
+          <div className="flex-1">
+            <p className="font-black text-black mb-1">Allez au bar récupérer vos gains</p>
+            <p className="text-stone-800 text-sm leading-relaxed">Présentez votre email au barman. Payez votre mise (1, 3 ou 5 bières) et repartez aussitôt avec vos bières gratuites en plus.</p>
+            <div className="bg-black rounded-xl px-4 py-3 mt-3 text-center">
+              <p className="text-yellow-400 text-sm font-bold">Exemple : mise 3 bières x cote 2.5</p>
+              <p className="text-yellow-400 text-lg font-black mt-1">= + 4.5 bières offertes</p>
+              <p className="text-stone-500 text-xs mt-1">Vous payez 3, vous repartez avec 7.5</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button onClick={() => setView("pari")} className="w-full py-4 bg-black hover:bg-stone-900 text-yellow-400 font-black rounded-xl transition-all text-sm uppercase tracking-wider">
+        Je me lance — Parier 🍺
+      </button>
+    </div>
+  );
+}
 // ─── APP ──────────────────────────────────────────────────────────────────────
 
 const NAV = [
@@ -1605,6 +1680,7 @@ export default function App() {
           {view==="admin" && (
             <PageAdmin pilots={pilots} setPilots={setPilots} paris={paris} setParis={setParis} parisOuverts={parisOuverts} setParisOuverts={setParisOuverts} resultats={resultats} setResultats={setResultats} />
           )}
+          {view==="regles" && <PageRegles setView={setView} />}
         </div>
 
         {/* Bottom Nav */}
